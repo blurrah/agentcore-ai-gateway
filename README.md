@@ -24,10 +24,22 @@ invoke.py ──POST /invocations──▶ agent.py (BedrockAgentCoreApp on :808
 | `examples/02_provider_routing.py` | `order`, `only`, `sort`: which upstream serves a given model |
 | `examples/03_timeouts.py` | Gateway-side `providerTimeouts` plus client-side `httpx.Timeout` |
 | `examples/04_agent_fast_failover.py` | `agent.py` with all of the above combined |
+| `examples/05_agent_ai_sdk_python.py` | Same agent on the [AI SDK for Python](https://github.com/vercel-labs/ai-python) instead of Strands: Gateway by default, typed routing params |
 
 `examples/01`–`03` use the plain `openai` SDK so the request body is visible with
 no framework in the way. Everything under `providerOptions.gateway` is a Gateway
 extension; the OpenAI SDK passes it through via `extra_body`.
+
+### Strands or the AI SDK for Python?
+
+AgentCore does not care; it only needs the `/invocations` and `/ping` contract.
+Strands (`agent.py`) is the AWS-native choice and reaches the Gateway through
+its OpenAI-compatible model class. The AI SDK for Python (`examples/05`) is
+Vercel's own client: no `base_url`, `AI_GATEWAY_API_KEY` is read automatically,
+and `models`/`order`/`only`/`sort`/`user` are typed fields on
+`ai.RoutingParams` / `ai.InferenceRequestParams` instead of a raw dict.
+`providerTimeouts` is not typed yet and still goes through `extra_body`. It is
+in public beta.
 
 ## The one idea
 

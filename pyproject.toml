@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Amazon Bedrock AgentCore runtime agent that calls models through Vercel AI Gateway"
 requires-python = ">=3.13"
 dependencies = [
+    "ai>=0.5.2",
     "bedrock-agentcore>=1.23.0",
     "httpx>=0.28.1",
     "strands-agents[openai]>=1.55.1",
