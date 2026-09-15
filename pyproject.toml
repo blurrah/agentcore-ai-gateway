@@ -1,0 +1,19 @@
+[project]
+name = "agentcore-ai-gateway"
+version = "0.1.0"
+description = "Amazon Bedrock AgentCore runtime agent that calls models through Vercel AI Gateway"
+requires-python = ">=3.13"
+dependencies = [
+    "bedrock-agentcore>=1.23.0",
+    "httpx>=0.28.1",
+    "strands-agents[openai]>=1.55.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
