@@ -28,6 +28,7 @@ invoke.py ──POST /invocations──▶ agent.py (BedrockAgentCoreApp on :808
 | `examples/06_custom_reporting.py` | Attribute usage to an app user and project tag, then query spend by user |
 | `examples/07_automatic_caching.py` | Send the same Anthropic prompt twice and prove the second call read cached tokens |
 | `examples/08_regional_inference.py` | Pin inference to the US or EU and verify the provider's resolved region |
+| `examples/09_agent_vercel_connect_mcp.py` | Give the Strands agent authenticated MCP tools using short-lived Vercel Connect tokens |
 
 `examples/01`–`03` use the plain `openai` SDK so the request body is visible with
 no framework in the way. Everything under `providerOptions.gateway` is a Gateway
@@ -110,6 +111,48 @@ the first Anthropic request and pays off when later turns reuse the prompt. A
 regional request fails with HTTP 400 when the selected model cannot run in the
 requested region; it does not fall back across regions.
 
+## Vercel Connect and MCP from AgentCore
+
+`examples/09_agent_vercel_connect_mcp.py` uses the native Strands `MCPClient` as
+the agent's tool provider. At the start of each AgentCore invocation, Python
+calls Vercel Connect's token endpoint with `httpx`. Connect returns a short-lived
+provider token, and Strands sends that token only to the configured MCP server.
+
+There are two credentials with separate jobs:
+
+1. `VERCEL_TOKEN` authenticates the AgentCore workload to Vercel Connect.
+2. The short-lived token returned by Connect authenticates Strands to the MCP server.
+
+AgentCore runs outside Vercel, so it cannot use the automatically injected Vercel
+OIDC token available to Vercel Functions. Use a project-scoped Vercel access token
+and an app-subject connector. The example deliberately requests
+`{"subject":{"type":"app"}}`. Do not use the AgentCore session ID as a Connect
+user ID. Arbitrary user-subject tokens require a Vercel OIDC caller and a separate
+user consent flow.
+
+Create and attach the connector from this linked project. Use the complete
+streamable HTTP MCP URL when creating it:
+
+```bash
+vercel link
+vercel connect create https://mcp.example.com/mcp --name agentcore-mcp
+vercel connect attach <connector-uid>
+```
+
+Then set the values documented in `.env.example` and run the AgentCore example:
+
+```bash
+set -a; source .env; set +a
+.venv/bin/python examples/09_agent_vercel_connect_mcp.py
+# In another terminal:
+.venv/bin/python invoke.py "Use the connected tools to answer my question"
+```
+
+The connector must support an app-level grant. If the MCP service only supports
+per-user OAuth, the honest architecture needs a small Vercel-hosted consent and
+token broker in front of AgentCore. Better Auth alone does not solve that runtime
+boundary; its Connect adapter signs a user into a web application.
+
 ## Running it anyway
 
 ```bash
@@ -130,4 +173,7 @@ uv run pytest                   # offline; asserts the exact request sent to the
 - [Custom reporting](https://vercel.com/docs/ai-gateway/observability-and-spend/custom-reporting)
 - [Automatic prompt caching](https://vercel.com/docs/ai-gateway/models-and-providers/automatic-caching)
 - [Regional inference](https://vercel.com/docs/ai-gateway/security-and-compliance/regional-inference)
+- [Vercel Connect authentication](https://vercel.com/docs/connect/concepts/authentication)
+- [Vercel Connect with AI SDK and MCP](https://vercel.com/docs/connect/frameworks/ai-sdk-and-mcp)
+- [Strands MCP tools](https://strandsagents.com/docs/user-guide/concepts/tools/mcp-tools/)
 - [bedrock-agentcore-sdk-python](https://github.com/aws/bedrock-agentcore-sdk-python)
