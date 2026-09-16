@@ -25,6 +25,9 @@ invoke.py ──POST /invocations──▶ agent.py (BedrockAgentCoreApp on :808
 | `examples/03_timeouts.py` | Gateway-side `providerTimeouts` plus client-side `httpx.Timeout` |
 | `examples/04_agent_fast_failover.py` | `agent.py` with all of the above combined |
 | `examples/05_agent_ai_sdk_python.py` | Same agent on the [AI SDK for Python](https://github.com/vercel-labs/ai-python) instead of Strands: Gateway by default, typed routing params |
+| `examples/06_custom_reporting.py` | Attribute usage to an app user and project tag, then query spend by user |
+| `examples/07_automatic_caching.py` | Send the same Anthropic prompt twice and prove the second call read cached tokens |
+| `examples/08_regional_inference.py` | Pin inference to the US or EU and verify the provider's resolved region |
 
 `examples/01`–`03` use the plain `openai` SDK so the request body is visible with
 no framework in the way. Everything under `providerOptions.gateway` is a Gateway
@@ -77,6 +80,36 @@ layer that guards against the Gateway or network itself being slow. Setting
 `max_retries=0` keeps the SDK from retrying on its own so the Gateway is the
 only thing doing failover.
 
+## Short demo path
+
+These demos each make one point and print the evidence needed to show it:
+
+```bash
+# Reliability: provider order, provider timeout and model fallback in one request
+.venv/bin/python examples/03_timeouts.py
+
+# Cost attribution: write user + project metadata, then query users for that project
+.venv/bin/python examples/06_custom_reporting.py --user customer-42 --project support-agent
+# The reporting API can lag by a few minutes and requires Pro or Enterprise.
+.venv/bin/python examples/06_custom_reporting.py --project support-agent --report-only
+
+# Cost and latency: the second identical long prompt should report cached input tokens
+.venv/bin/python examples/07_automatic_caching.py
+
+# Data residency: the response metadata must say the provider ran in the EU
+.venv/bin/python examples/08_regional_inference.py eu
+```
+
+`agent.py` currently uses the AgentCore session ID as the reporting `user`. In a
+real product, pass your stable application user ID instead. Use tags for your own
+project, feature and environment dimensions. Custom reports are account-scoped,
+so `examples/06` filters by `project:support-agent` before grouping by user.
+
+The timeout demo needs BYOK provider credentials. Automatic caching costs more on
+the first Anthropic request and pays off when later turns reuse the prompt. A
+regional request fails with HTTP 400 when the selected model cannot run in the
+requested region; it does not fall back across regions.
+
 ## Running it anyway
 
 ```bash
@@ -94,4 +127,7 @@ uv run pytest                   # offline; asserts the exact request sent to the
 - [Model fallbacks](https://vercel.com/docs/ai-gateway/models-and-providers/model-fallbacks)
 - [Provider routing: order, only, sort](https://vercel.com/docs/ai-gateway/models-and-providers/provider-options)
 - [Provider timeouts](https://vercel.com/docs/ai-gateway/models-and-providers/provider-timeouts)
+- [Custom reporting](https://vercel.com/docs/ai-gateway/observability-and-spend/custom-reporting)
+- [Automatic prompt caching](https://vercel.com/docs/ai-gateway/models-and-providers/automatic-caching)
+- [Regional inference](https://vercel.com/docs/ai-gateway/security-and-compliance/regional-inference)
 - [bedrock-agentcore-sdk-python](https://github.com/aws/bedrock-agentcore-sdk-python)
